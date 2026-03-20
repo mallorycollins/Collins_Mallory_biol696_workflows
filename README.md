@@ -1,1 +1,1 @@
-# Collins_Mallory_biol696_workflows
+# collins_mallory_biol696_workflows
