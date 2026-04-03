@@ -72,5 +72,5 @@ Body takes into account the variation between species allowing for comparison be
 
 ![(Scatter Plot](../figures/flipper_vs_mass_facet.png)
 
-(week03_penguine_wrangling/figures/flipper_vs_mass_facet.png)
+
 
