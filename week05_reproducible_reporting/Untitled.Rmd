@@ -1,0 +1,89 @@
+---
+title: "week05_excercise_report_Collins"
+author: "Mallory Collins"
+date: "2026-04-17"
+output: html_document
+---
+This is the first block that installs everything needed
+```{r setup}
+if (!require("tidyverse")) install.packages("tidyverse")
+if (!require("gapminder")) install.packages("gapminder")
+
+library(tidyverse)
+library(gapminder)
+
+data <- gapminder
+```
+
+Inspect data set 
+```{r}
+glimpse(data)
+dim(data)
+names(data)
+```
+
+```{r summary_table}
+summary_table <- data %>%
+  group_by(continent) %>%
+  summarise(
+    mean_lifeExp = mean(lifeExp, na.rm = TRUE),
+    sd_lifeExp   = sd(lifeExp, na.rm = TRUE),
+    mean_gdp     = mean(gdpPercap, na.rm = TRUE),
+    sd_gdp       = sd(gdpPercap, na.rm = TRUE)
+  )
+
+summary_table
+```
+
+The above is the summary of life expectancy GDP/continent
+
+```{r lifeexp_plot}
+lifeexp_plot <- ggplot(data, aes(x = continent, y = lifeExp, fill = continent)) +
+  geom_boxplot() +
+  labs(
+    title = "Life Expectancy by Continent",
+    x = "Continent",
+    y = "Life Expectancy"
+  ) +
+  theme_minimal()
+
+lifeexp_plot
+```
+
+
+```{r anova_model}
+anova_model <- aov(lifeExp ~ continent, data = data)
+summary(anova_model)
+```
+
+```{r tukey}
+TukeyHSD(anova_model)
+```
+
+```{r gdp_plot}
+gdp_plot <- ggplot(data, aes(x = gdpPercap, y = lifeExp)) +
+  geom_point(alpha = 0.5) +
+  scale_x_log10() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    title = "GDP vs Life Expectancy",
+    x = "GDP per Capita (log scale)",
+    y = "Life Expectancy"
+  ) +
+  theme_minimal()
+
+gdp_plot
+```
+
+
+```{r lm_model}
+lm_model <- lm(lifeExp ~ log10(gdpPercap), data = data)
+summary(lm_model)
+```
+
+#Results
+The ANOVA test revealed which pairs of countries had significant differences between their GDPs and life expectancy. These countries include: Americas-Africa, Asia-Africa, Europe-Africa, Oceania-Africa. When plotted using a linearalized regression, it shows that countries with high GDPs have a strong relationship to high life expectancies as well. 
+
+#Discussion
+Countries with higher GDPs may have more money to put towards access to resources that will improve life expectancy. Since the data set uses national averages, it may not represent disparities within countries. No, the statistical significance only tells us that there is a significant between the values in the data set. However, it does not represent if the GDP actually has a large biological effect on the quality and length of life.
+Country population may bias the data set. Countries with larger populations will have more data.
