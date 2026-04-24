@@ -86,4 +86,12 @@ The ANOVA test revealed which pairs of countries had significant differences bet
 
 #Discussion
 Countries with higher GDPs may have more money to put towards access to resources that will improve life expectancy. Since the data set uses national averages, it may not represent disparities within countries. No, the statistical significance only tells us that there is a significant between the values in the data set. However, it does not represent if the GDP actually has a large biological effect on the quality and length of life.
-Country population may bias the data set. Countries with larger populations will have more data.
+
+
+```{r}
+ggsave("week05_reproducible_reporting/figures/lifeexp_plot.png", lifeexp_plot)
+ggsave("week05_reproducible_reporting/figures/gdp_plot.png", gdp_plot)
+
+
+```
+

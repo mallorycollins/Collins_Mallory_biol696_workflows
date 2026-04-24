@@ -1,0 +1,190 @@
+---
+title: "week06_interactive_analysis_version2_collins"
+author: "Mallory Collins"
+date: "2026-04-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+```{r load_data}
+if (!require("MASS")) install.packages("MASS")
+if (!require("plotly")) install.packages("plotly")
+if (!require("crosstalk")) install.packages("crosstalk")
+
+
+library(tidyverse)
+library(MASS)
+library(plotly)
+library(crosstalk)
+
+data("birthwt")
+
+data <- birthwt %>%
+  as_tibble() %>%
+  mutate(
+    low = factor(low, levels = c(0,1), labels = c("not_low","low")),
+    smoke = factor(smoke, levels = c(0,1), labels = c("no","yes")),
+    ht = factor(ht, levels = c(0,1), labels = c("no","yes")),
+    ui = factor(ui, levels = c(0,1), labels = c("no","yes")),
+    race = factor(race, levels = c(1,2,3), labels = c("white","black","other"))
+  )
+```
+
+
+```{r inspect_data}
+# Basic structure
+glimpse(data)
+
+# Dimensions
+dim(data)
+
+# Variable names
+names(data)
+
+# Create a clean summary table
+summary_table <- data %>%
+  summarise(
+    n = n(),
+    mean_age = mean(age, na.rm = TRUE),
+    mean_weight = mean(lwt, na.rm = TRUE),
+    mean_birth_weight = mean(bwt, na.rm = TRUE)
+  )
+
+# Display nicely formatted table
+knitr::kable(
+  summary_table,
+  caption = "Summary statistics for birth weight dataset",
+  digits = 2
+)
+```
+What does each row represent?
+variables
+What is the response variable?
+birth weight
+Which variables are categorical vs numeric?
+Categorical: Low, race, smoking, ptl, ht
+numerical: ui, ftv, bwt
+
+
+```{r box_plot}
+smoke_plot <- ggplot(data, aes(x = smoke, fill = low)) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("not_low" = "#7FB77E", "low" = "red")) +
+  labs(
+    title = "Proportion of Low Birth Weight by Smoking Status",
+    y = "Proportion"
+  ) +
+  theme_minimal()
+
+smoke_plot
+```
+
+```{r static_plot}
+weight_plot <- ggplot(data, aes(x = low, y = lwt, fill = low)) +
+  geom_boxplot() +
+  labs(
+    title = "Mother's Weight by Birth Weight Category",
+    x = "Birth Weight Category",
+    y = "Mother's Weight"
+  ) +
+  theme_minimal()
+
+weight_plot
+```
+Do smokers appear more likely to have low birth weight babies?
+yes
+Does maternal weight differ between groups?
+no
+What patterns stand out?
+There is not a large differentce between the percent of low birth weight babies between smoking and non smoking mothers from the bar chart
+
+```{r shared_data}
+shared_data <- SharedData$new(data)
+
+bscols(
+  widths = c(3, 9),
+  list(
+    filter_select(
+      id = "smoke_filter",
+      label = "Smoking status",
+      sharedData = shared_data,
+      group = ~smoke
+    ),
+    filter_slider(
+      id = "age_filter",
+      label = "Mother's age",
+      sharedData = shared_data,
+      column = ~age
+    )
+  ),
+  plot_ly(
+    shared_data,
+    x = ~lwt,
+    y = ~bwt,
+    color = ~low,
+    type = "scatter",
+    mode = "markers"
+  )
+)
+```
+What happens when you change the filters?
+you can isolate different combinations of data depending on the mothers smoking status and age.
+Why might interactive plots be useful?
+You can compare data without making several graphs
+
+Why is a linear model not appropriate here?
+because we are comparing the differences between two sets of data
+What type of response variable do we have?
+binary
+
+```{r logistic_regression}
+# Fit model
+model1 <- glm(low ~ smoke, data = data, family = binomial)
+
+# Create predicted values
+data$pred_prob <- predict(model1, type = "response")
+
+# Plot
+ggplot(data, aes(x = smoke, y = pred_prob, color = smoke)) +
+  geom_jitter(width = 0.1, alpha = 0.5) +
+  stat_summary(fun = mean, geom = "point", size = 4, color = "black") +
+  labs(
+    title = "Predicted Probability of Low Birth Weight by Smoking Status",
+    y = "Predicted Probability",
+    x = "Smoking Status"
+  ) +
+  theme_minimal()
+```
+
+```{r expand_model}
+model2 <- glm(low ~ smoke + age + lwt + ht + ui, data = data, family = binomial)
+summary(model2)
+```
+
+Is smoking a significant predictor?
+No becuase it has a p value above 0.05
+What direction is the effect?
+positive
+Do additional variables improve the model?
+Additional variables like age has a more significant association with low birth weight than smoking
+What does this mean biologically?
+Smoking has some effect on birth weight but it is not a significant factor that contributes to low birth weight. Low birth weight is probably a combination of multiple variables that can increase the likelyhood of low birth weight. 
+
+
+The smoking of the mother does not have a significant effect on low birthweight. This result is seen by a p value greater than 0.05 by sorting binary data, if a newborn had low birthweught or not and if the mother smokes. Therefore we accept the null hypothesis that smking does not have a significatn effect on birth weight.
+
+What biological or health factors might explain these results?
+smoking could also lead to hypeertension and low weight of the mother, other variables which had a lower p value than smoking alone.
+What are limitations of this dataset?
+Geographical regions, income, and acess to healcare are also factors not reported that may have an effect on birth weight.
+How does this compare to your expectations?
+I was surprised that smoking alone is not associated significantly with low birth weight, but it makes sense that low birthweight is the outcome of an accumulation of variables.
+
+

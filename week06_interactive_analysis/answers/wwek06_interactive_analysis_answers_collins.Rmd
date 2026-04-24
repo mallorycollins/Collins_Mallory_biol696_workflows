@@ -1,0 +1,31 @@
+---
+title: "wk06_exercise_report_collins.Rmd"
+author: "Mallory Collins"
+date: "2026-04-24"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chun $set( echo = TRUE, message =
+FALSE, warning = FALSE )
+```
+
+\`\`\`{r load_data} if (!require("tidyverse"))
+install.packages("tidyverse") if (!require("MASS"))
+install.packages("MASS") if (!require("plotly"))
+install.packages("plotly") if (!require("crosstalk"))
+install.packages("crosstalk")
+
+library(tidyverse) library(MASS) library(plotly) library(crosstalk)
+
+data("birthwt")
+
+data \<- birthwt %\>% as_tibble() %\>% mutate( low = factor(low, levels
+= c(0,1), labels = c("not_low","low")), smoke = factor(smoke, levels =
+c(0,1), labels = c("no","yes")), ht = factor(ht, levels = c(0,1), labels
+= c("no","yes")), ui = factor(ui, levels = c(0,1), labels =
+c("no","yes")), race = factor(race, levels = c(1,2,3), labels =
+c("white","black","other")) )
