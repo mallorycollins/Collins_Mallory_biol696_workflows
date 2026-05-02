@@ -1,0 +1,222 @@
+---
+title: "bio696_final_project"
+author: "Mallory Collins"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+This data set is competition assay data. I am competing different mutant strains of pseudomonas fluorescens against the WT to see if any mutants are more fit based on CFU colony counts. The mutant strain is tagged with kanomycin resistance (KM) and the WT is tagged with streptomycin resistance so we can see the relative fitness between the two strains when grown on plates supplemented with KM or SM. The number of CFU on day 4 compared to the seeded baseline is used to calculate the relative fitness between 3 technical replicates. 
+The malthusian, the comparison of CFU on day 0 compared to day 4 is calculated by ln(CFU day4/CFU Day0). 
+
+My general question is are any of the supermucoid mutants (SM) more fit than the WT. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+
+```{r load_data}
+library(readxl)
+
+# Define file paths
+data_dir <- "final_project"
+fig_dir  <- "final_project/figures"
+
+# Load data
+relative_fitness <- read_excel("SM Competitions 11-7-2025.xlsx", sheet = "Graph")
+head(relative_fitness)
+```
+
+The observations: each row represents one biological replicate (n = 2–3 per competition group) 
+of a pairwise co-culture competition
+The variables are the different strains of P. fluorescens: WT, SM, SM*, SM3832
+
+Relevant variables:  relative fitness: The Malthusian parameter for each strain is computed as 
+ln(CFU Day 4 / CFU Day 0), and relative fitness is the ratio of these values between the 
+two co-competing strains.
+
+
+```{r load-libraries}
+if (!require("tidyverse")) install.packages("tidyverse")
+if (!require("knitr"))     install.packages("knitr")
+
+library(tidyverse)
+library(knitr)
+```
+
+Data cleaning 
+Accounted for missing data, one replicate was contaminated and removed
+Drop the average and standard deviation columns from the relative fitness because I can calculate in R.
+Convert the table into long format
+
+I am also picking only the comlumns I need of the relative fitness to compare and analyze on the sheet containing the graph of the excel sheet. 
+
+
+
+```{r check_names}
+library(readxl)
+
+# Read the Graph sheet and check exactly what R sees
+fitness_raw <- read_excel("SM Competitions 11-7-2025.xlsx", sheet = "Graph")
+
+# Check the column names and first few rows
+names(fitness_raw)
+head(fitness_raw)
+```
+
+
+
+
+
+
+relative_fitness <- read_excel("SM Competitions 11-7-2025.xlsx", sheet = "Graph")
+head(relative_fitness)
+```
+
+```{r data-cleaning}
+fitness_long <- relative_fitness %>%
+  select(competition = Competition, rep_A = `Rep 1`, rep_B = `Rep 2`, rep_C = `Rep 3`) %>%
+  pivot_longer(
+    cols      = starts_with("rep_"),
+    names_to  = "replicate",
+    values_to = "relative_fitness"
+  ) %>%
+  mutate(
+    competition = factor(competition, levels = c(
+      "WT Km vs. WT Sm",
+      "∆E Km vs. WT Sm",
+      "SM Km vs. WT Sm",
+      "SM* Km vs. WT Sm",
+      "SM 3832vs. WT Sm"
+    ))
+  ) %>%
+  filter(!is.na(relative_fitness))
+
+glimpse(fitness_long)
+dim(fitness_long)
+names(fitness_long)
+```
+Summary Table
+```{r summary_table}
+summary_table <- fitness_long %>%
+  group_by(competition) %>%
+  summarise(
+    n            = n(),
+    mean_fitness = mean(relative_fitness, na.rm = TRUE),
+    sd_fitness   = sd(relative_fitness,   na.rm = TRUE),
+    se_fitness   = sd(relative_fitness,   na.rm = TRUE) / sqrt(n())
+  )
+
+knitr::kable(
+  summary_table,
+  caption = "Table 1. Mean relative fitness (KM Malthusian / SM Malthusian) per competition group. Values > 1 indicate the KM strain outcompeted WT SM.",
+  digits  = 3
+)
+```
+
+
+Bar graph 
+```{r bar_plot, fig.width = 8, fig.height = 5}
+library(tidyverse)
+
+plot_summary <- fitness_long %>%
+  group_by(competition) %>%
+  summarise(
+    mean_fitness = mean(relative_fitness, na.rm = TRUE),
+    sd_fitness   = sd(relative_fitness,   na.rm = TRUE)
+  )
+
+bar_plot <- ggplot() +
+  geom_col(
+    data  = plot_summary,
+    aes(x = competition, y = mean_fitness, fill = competition),
+    width = 0.6,
+    color = "black"
+  ) +
+  geom_errorbar(
+    data  = plot_summary,
+    aes(x    = competition,
+        ymin = mean_fitness - sd_fitness,
+        ymax = mean_fitness + sd_fitness),
+    width = 0.2
+  ) +
+  geom_jitter(
+    data  = fitness_long,
+    aes(x = competition, y = relative_fitness),
+    width = 0.1,
+    size  = 2.5,
+    shape = 21,
+    fill  = "white",
+    color = "black"
+  ) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "gray40") +
+  scale_y_continuous(limits = c(0, 4), expand = c(0, 0)) +
+  labs(
+    title   = "Relative Fitness of KM Strains vs. WT SM in Competition Assays",
+    x       = "Competition",
+    y       = "Relative Fitness (KM / SM Malthusian)",
+    caption = "Bars = mean +/- SD; points = individual biological replicates. Dashed line = neutral fitness (1.0)."
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x     = element_text(angle = 30, hjust = 1)
+  )
+
+bar_plot
+
+ggsave(file.path(fig_dir, "bar_plot.png"), plot = bar_plot, width = 8, height = 5)
+```
+Box plot
+
+
+
+Box plot
+```{r fitness_boxplot, fig.width = 8, fig.height = 5}
+library(tidyverse)
+
+fitness_boxplot <- ggplot(fitness_long, aes(x = competition, y = relative_fitness, fill = competition)) +
+  geom_boxplot(alpha = 0.7) +
+  geom_jitter(width = 0.1, size = 2, alpha = 0.7, color = "black") +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "gray40") +
+  labs(
+    title = "Distribution of Relative Fitness by Competition Group",
+    x     = "Competition",
+    y     = "Relative Fitness (KM / SM Malthusian)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x     = element_text(angle = 30, hjust = 1)
+  )
+
+fitness_boxplot
+
+ggsave(file.path(fig_dir, "fitness_boxplot.png"), plot = fitness_boxplot, width = 8, height = 5)
+```
+
+
+Hypotheses
+Null hypothesis (H0): Mutations do not have a fitness advantage when competed against the WT strain in P fluorescens.
+Alternative hypothesis (H1): Mutations do have a fitness advantage when competed against the wild type.
+
+Statistic test.
+I am using an anova because I am comparing the relative fitness between 5 different groups. It can test all 5 groups simultaneously rather than doing multiple T-tests. A Tukey HSD can tell which pairs/combinations of groups are significant. 
+
+```{r anova_model}
+library(tidyverse)
+
+anova_model <- aov(relative_fitness ~ competition, data = fitness_long)
+summary(anova_model)
+```
+```{r tukey}
+TukeyHSD(anova_model)
+```
+The main result produced a p value of 0.0092 so we can reject the null hypothesis. Meaning that mutation provides  a fitness advantage compared to the WT strain. Also that the ∆E and SM groups were both significantly more fit than the WT. 
+
+I used my antibiotic competition dataset to assess the relative fitness of different P. fluorescens strains against the WT strain. I was able to summarize my data in a table and present it in a bar chart and box plot. I found that the ∆E and SM mutants had a significant advantage using an anova and a tukey HSD statistic test. 
+

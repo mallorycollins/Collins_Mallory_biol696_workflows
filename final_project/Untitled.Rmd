@@ -1,0 +1,23 @@
+---
+title: "bio696_final_project"
+author: "Mallory Collins"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+```{r load_data}
+library(readxl)
+data_dir <- "final_project"
+my_data <- read_excel(file.path(data_dir, "SM Competitions 11-7-2025.xlsx"))
+#getwd()
+head(my_data)
+
+```
